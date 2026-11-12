@@ -1,0 +1,39 @@
+name: Build & Deploy UrnProxies (Cloudflare Pages / Static Vite)
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Static Vite Bundle
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies & copy Scramjet/Bare-Mux/Epoxy assets
+        run: npm install
+
+      - name: Build production static bundle (vite build)
+        run: npm run build
+
+      - name: Verify dist output and Cloudflare Pages _headers
+        run: |
+          test -f dist/index.html
+          test -f dist/_headers
+          test -f dist/sw.js
+          test -f dist/scramjet/scramjet.all.js
+          test -f dist/scramjet/scramjet.wasm.wasm
+          test -f dist/baremux/index.mjs
+          test -f dist/epoxy/index.mjs
