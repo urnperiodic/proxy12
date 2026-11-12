@@ -1,0 +1,6 @@
+{
+  "name": "Scramjet Web Proxy",
+  "description": "Production-ready web proxy powered by Scramjet, Bare-Mux, Epoxy Transport, and Wisp with a dark-mode browser interface.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

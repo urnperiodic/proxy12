@@ -1,0 +1,1061 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Scramjet Web Proxy</title>
+    <meta
+      name="description"
+      content="Production-ready web proxy powered by Scramjet, Bare-Mux, Epoxy Transport, and Wisp with a dark-mode browser interface."
+    />
+    <meta property="og:title" content="Scramjet Web Proxy" />
+    <meta
+      property="og:description"
+      content="Production-ready web proxy powered by Scramjet, Bare-Mux, Epoxy Transport, and Wisp with a dark-mode browser interface."
+    />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin="anonymous" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,600;1,700&display=swap"
+      rel="stylesheet"
+      crossorigin="anonymous"
+    />
+    <script src="/scramjet/scramjet.all.js"></script>
+    <style>
+      :root {
+        --bg-canvas: #090910;
+        --bg-surface: #11121c;
+        --bg-card: #11121d;
+        --bg-card-hover: #171928;
+        --bg-input: #11121d;
+        --border-subtle: rgba(255, 255, 255, 0.08);
+        --border-hover: rgba(255, 255, 255, 0.16);
+        --border-focus: #818cf8;
+        --text-primary: #f4f4f8;
+        --text-secondary: #9499b3;
+        --text-muted: #686d87;
+        --accent: #818cf8;
+        --accent-hover: #6366f1;
+        --status-ok: #10b981;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background-color: var(--bg-canvas);
+        color: var(--text-primary);
+        font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .app-shell {
+        display: flex;
+        flex-direction: column;
+        width: 100vw;
+        height: 100vh;
+        background: var(--bg-canvas);
+      }
+
+      /* Top Browser Toolbar */
+      .browser-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        height: 52px;
+        padding: 0 14px;
+        background: var(--bg-surface);
+        border-bottom: 1px solid var(--border-subtle);
+        user-select: none;
+        flex-shrink: 0;
+        z-index: 30;
+      }
+
+      .app-shell.is-fullscreen .browser-toolbar {
+        display: none;
+      }
+
+      .brand-cluster {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding-right: 10px;
+        border-right: 1px solid var(--border-subtle);
+        flex-shrink: 0;
+        cursor: pointer;
+      }
+
+      .brand-mark {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        background: rgba(129, 140, 248, 0.14);
+        color: var(--accent);
+        border: 1px solid rgba(129, 140, 248, 0.28);
+        font-weight: 700;
+        font-size: 13px;
+      }
+
+      .brand-name {
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        color: var(--text-primary);
+        white-space: nowrap;
+      }
+
+      .nav-controls {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex-shrink: 0;
+      }
+
+      .icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: background-color 140ms ease, color 140ms ease;
+      }
+
+      .icon-btn:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.07);
+        color: var(--text-primary);
+      }
+
+      .icon-btn:active:not(:disabled) {
+        transform: translateY(0.5px);
+      }
+
+      .icon-btn:focus-visible {
+        outline: 2px solid var(--border-focus);
+        outline-offset: 1px;
+      }
+
+      /* Omnibox Address & Search Bar */
+      .omnibox-form {
+        display: flex;
+        align-items: center;
+        flex: 1;
+        min-width: 180px;
+        height: 36px;
+        background: #0b0c14;
+        border: 1px solid var(--border-subtle);
+        border-radius: 9px;
+        padding: 0 6px 0 12px;
+        gap: 8px;
+        transition: border-color 150ms ease, box-shadow 150ms ease;
+      }
+
+      .omnibox-form:focus-within {
+        border-color: var(--border-focus);
+        box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.16);
+      }
+
+      .omnibox-shield {
+        display: flex;
+        align-items: center;
+        color: var(--text-muted);
+        flex-shrink: 0;
+      }
+
+      .omnibox-input {
+        flex: 1;
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: var(--text-primary);
+        font-family: "Plus Jakarta Sans", sans-serif;
+        font-size: 13px;
+      }
+
+      .omnibox-input::placeholder {
+        color: var(--text-muted);
+      }
+
+      .omnibox-clear {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border: none;
+        border-radius: 5px;
+        background: transparent;
+        color: var(--text-muted);
+        cursor: pointer;
+      }
+
+      .omnibox-clear.is-visible {
+        display: inline-flex;
+      }
+
+      .omnibox-clear:hover {
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text-primary);
+      }
+
+      .omnibox-go {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 26px;
+        padding: 0 11px;
+        border-radius: 6px;
+        border: none;
+        background: rgba(129, 140, 248, 0.15);
+        color: var(--accent);
+        font-family: "Plus Jakarta Sans", sans-serif;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 140ms ease, color 140ms ease;
+        white-space: nowrap;
+      }
+
+      .omnibox-go:hover {
+        background: var(--accent);
+        color: #090910;
+      }
+
+      .toolbar-right {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+
+      /* Progress bar */
+      .loading-bar-track {
+        position: relative;
+        width: 100%;
+        height: 2px;
+        background: transparent;
+        overflow: hidden;
+        flex-shrink: 0;
+        z-index: 25;
+      }
+
+      .loading-bar-fill {
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(90deg, #818cf8, #c084fc);
+        transition: width 250ms ease, opacity 200ms ease;
+        opacity: 0;
+      }
+
+      .loading-bar-track.is-active .loading-bar-fill {
+        opacity: 1;
+      }
+
+      /* Main Viewport Container */
+      .viewport-stage {
+        position: relative;
+        flex: 1;
+        width: 100%;
+        height: 100%;
+        background: var(--bg-canvas);
+        overflow: hidden;
+      }
+
+      #proxy-frame {
+        width: 100%;
+        height: 100%;
+        border: 0;
+        background: #ffffff;
+        display: block;
+      }
+
+      /* Centerpiece Home Launcher */
+      .home-overlay {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(ellipse 70% 50% at 50% 35%, rgba(99, 102, 241, 0.08), transparent 70%),
+          var(--bg-canvas);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 32px 20px;
+        z-index: 20;
+        overflow-y: auto;
+        transition: opacity 180ms ease;
+      }
+
+      .home-overlay.is-hidden {
+        display: none;
+      }
+
+      .home-container {
+        width: 100%;
+        max-width: 820px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 32px;
+      }
+
+      .home-header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        text-align: center;
+      }
+
+      .home-title {
+        font-size: clamp(2.25rem, 4.5vw, 3.25rem);
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        color: var(--text-primary);
+        line-height: 1.1;
+      }
+
+      .home-credit {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        letter-spacing: 0.01em;
+      }
+
+      .home-credit span {
+        color: var(--text-primary);
+        font-weight: 600;
+      }
+
+      /* 5-Card Quick Destinations Row (Matching Reference Image) */
+      .quick-grid {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .quick-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px 12px 18px;
+        border-radius: 16px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-subtle);
+        color: var(--text-primary);
+        text-align: center;
+        cursor: pointer;
+        transition: transform 150ms ease, border-color 150ms ease, background-color 150ms ease,
+          box-shadow 150ms ease;
+      }
+
+      .quick-card:hover {
+        background: var(--bg-card-hover);
+        border-color: var(--border-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 12px 28px -10px rgba(0, 0, 0, 0.65);
+      }
+
+      .quick-card:focus-visible {
+        outline: 2px solid var(--border-focus);
+        outline-offset: 2px;
+      }
+
+      .quick-icon-frame {
+        width: 48px;
+        height: 48px;
+        border-radius: 13px;
+        background: #141522;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 14px;
+        flex-shrink: 0;
+      }
+
+      .quick-icon-badge {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+
+      .quick-card-name {
+        font-size: 13.5px;
+        font-weight: 700;
+        font-style: italic;
+        color: var(--text-primary);
+        margin-bottom: 5px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+      }
+
+      .quick-card-domain {
+        font-size: 11.5px;
+        font-style: italic;
+        color: var(--text-muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+      }
+
+      /* Center Search Bar */
+      .home-search-form {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        height: 54px;
+        background: var(--bg-input);
+        border: 1px solid var(--border-subtle);
+        border-radius: 16px;
+        padding: 0 10px 0 18px;
+        gap: 12px;
+        box-shadow: 0 18px 40px -15px rgba(0, 0, 0, 0.6);
+        transition: border-color 150ms ease, box-shadow 150ms ease;
+      }
+
+      .home-search-form:focus-within {
+        border-color: var(--border-focus);
+        box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.15), 0 18px 40px -15px rgba(0, 0, 0, 0.7);
+      }
+
+      .home-search-input {
+        flex: 1;
+        height: 100%;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: var(--text-primary);
+        font-family: "Plus Jakarta Sans", sans-serif;
+        font-size: 14.5px;
+      }
+
+      .home-search-input::placeholder {
+        color: var(--text-muted);
+      }
+
+      .home-search-btn {
+        height: 38px;
+        padding: 0 18px;
+        border-radius: 11px;
+        border: none;
+        background: var(--accent);
+        color: #090910;
+        font-family: "Plus Jakarta Sans", sans-serif;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background-color 140ms ease;
+        white-space: nowrap;
+      }
+
+      .home-search-btn:hover {
+        background: var(--accent-hover);
+        color: #ffffff;
+      }
+
+      /* Floating Exit Fullscreen Button */
+      .exit-fullscreen-fab {
+        position: fixed;
+        top: 12px;
+        right: 12px;
+        z-index: 50;
+        display: none;
+        align-items: center;
+        gap: 6px;
+        height: 34px;
+        padding: 0 12px;
+        border-radius: 8px;
+        background: rgba(17, 18, 28, 0.92);
+        border: 1px solid rgba(129, 140, 248, 0.35);
+        color: var(--text-primary);
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+      }
+
+      .app-shell.is-fullscreen .exit-fullscreen-fab {
+        display: inline-flex;
+      }
+
+      @media (max-width: 760px) {
+        .quick-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .brand-name {
+          display: none;
+        }
+        .brand-cluster {
+          border-right: none;
+          padding-right: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app-shell" class="app-shell">
+      <!-- Top Navigation Bar -->
+      <header class="browser-toolbar" role="banner">
+        <div id="brand-home" class="brand-cluster" title="UrnProxies Home">
+          <div class="brand-mark" aria-hidden="true">U</div>
+          <span class="brand-name">UrnProxies</span>
+        </div>
+
+        <div class="nav-controls" role="group" aria-label="Browser Navigation">
+          <button id="btn-back" class="icon-btn" type="button" title="Back" aria-label="Back">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 12H5" />
+              <path d="M12 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button id="btn-forward" class="icon-btn" type="button" title="Forward" aria-label="Forward">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14" />
+              <path d="M12 5l7 7-7 7" />
+            </svg>
+          </button>
+          <button id="btn-reload" class="icon-btn" type="button" title="Reload Page" aria-label="Reload Page">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+              <path d="M21 3v5h-5" />
+            </svg>
+          </button>
+          <button id="btn-home" class="icon-btn" type="button" title="Home" aria-label="Home">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+          </button>
+        </div>
+
+        <form id="url-form" class="omnibox-form" autocomplete="off">
+          <span class="omnibox-shield" title="Search or enter web address">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </span>
+          <input
+            id="url-input"
+            class="omnibox-input"
+            type="text"
+            spellcheck="false"
+            placeholder="Search with DuckDuckGo or enter a web address..."
+            aria-label="URL or Search Query"
+          />
+          <button id="btn-clear" class="omnibox-clear" type="button" title="Clear" aria-label="Clear">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+          <button id="btn-go" class="omnibox-go" type="submit">Go</button>
+        </form>
+
+        <div class="toolbar-right">
+          <button id="btn-fullscreen" class="icon-btn" type="button" title="Toggle Fullscreen" aria-label="Toggle Fullscreen">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+              <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+              <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+              <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Loading Progress Bar -->
+      <div id="loading-track" class="loading-bar-track" aria-hidden="true">
+        <div id="loading-fill" class="loading-bar-fill"></div>
+      </div>
+
+      <!-- Fullscreen Exit Floating Control -->
+      <button id="btn-exit-fullscreen" class="exit-fullscreen-fab" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 3v3a2 2 0 0 1-2 2H3" />
+          <path d="M21 8h-3a2 2 0 0 1-2-2V3" />
+          <path d="M3 16h3a2 2 0 0 1 2 2v3" />
+          <path d="M16 21v-3a2 2 0 0 1 2-2h3" />
+        </svg>
+        Exit Fullscreen
+      </button>
+
+      <!-- Main Content Stage with Full-Height Iframe -->
+      <main class="viewport-stage">
+        <div id="home-overlay" class="home-overlay">
+          <div class="home-container">
+            <div class="home-header">
+              <h1 class="home-title">UrnProxies</h1>
+              <p class="home-credit">Made by <span>Urnperiodic</span></p>
+            </div>
+
+            <!-- 5 Quick Destinations from Reference Image -->
+            <div class="quick-grid">
+              <!-- 1. Portal Network -->
+              <button type="button" class="quick-card" data-url="https://portal-network.com">
+                <div class="quick-icon-frame">
+                  <div class="quick-icon-badge" style="background: #ffffff;">
+                    <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
+                      <rect x="6" y="4" width="20" height="24" rx="4" fill="#2e1065" />
+                      <path d="M10 26V9a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v17" stroke="#d946ef" stroke-width="2.5" />
+                      <rect x="12" y="9" width="8" height="15" rx="1" fill="url(#portalGrad)" />
+                      <defs>
+                        <linearGradient id="portalGrad" x1="16" y1="9" x2="16" y2="24" gradientUnits="userSpaceOnUse">
+                          <stop stop-color="#f0abfc" />
+                          <stop offset="1" stop-color="#9333ea" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                  </div>
+                </div>
+                <span class="quick-card-name">Portal Network</span>
+                <span class="quick-card-domain">portal-network.com</span>
+              </button>
+
+              <!-- 2. Gravity Lab -->
+              <button type="button" class="quick-card" data-url="https://gravitylab.portal-network.com">
+                <div class="quick-icon-frame">
+                  <div class="quick-icon-badge" style="background: #0d2e22;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                      <polyline points="2 12 12 17 22 12" />
+                      <polyline points="2 17 12 22 22 17" />
+                    </svg>
+                  </div>
+                </div>
+                <span class="quick-card-name">Gravity Lab</span>
+                <span class="quick-card-domain">gravitylab.portal-network...</span>
+              </button>
+
+              <!-- 3. Google -->
+              <button type="button" class="quick-card" data-url="https://www.google.com">
+                <div class="quick-icon-frame">
+                  <div class="quick-icon-badge">
+                    <svg width="24" height="24" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10 5.35 0 9.25-3.67 9.25-9.09 0-1.15-.15-1.81-.15-1.81Z" />
+                      <path fill="#EA4335" d="M3.15 7.34l2.47 1.81C6.55 6.81 9.06 4.73 12.2 4.73c3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C8.14 2 4.74 4.16 3.15 7.34Z" />
+                      <path fill="#FBBC05" d="M12.25 22c2.83 0 5.23-.93 6.96-2.51l-2.66-2.1c-.97.69-2.31 1.88-4.35 1.88-3.09 0-5.73-2.06-6.64-4.88l-2.49 1.91C4.68 19.68 8.16 22 12.25 22Z" />
+                      <path fill="#34A853" d="M5.56 14.39A7.15 7.15 0 0 1 5 12c0-.86.18-1.69.46-2.45L2.99 7.7a9.96 9.96 0 0 0-.96 4.3c0 1.61.38 3.13 1.04 4.3l2.49-1.91Z" />
+                    </svg>
+                  </div>
+                </div>
+                <span class="quick-card-name">Google</span>
+                <span class="quick-card-domain">google.com</span>
+              </button>
+
+              <!-- 4. Youtube -->
+              <button type="button" class="quick-card" data-url="https://www.youtube.com">
+                <div class="quick-icon-frame">
+                  <div class="quick-icon-badge">
+                    <svg width="26" height="26" viewBox="0 0 24 24">
+                      <path fill="#FF0000" d="M21.58 7.19a2.75 2.75 0 0 0-1.94-1.94C17.92 4.8 12 4.8 12 4.8s-5.92 0-7.64.45a2.75 2.75 0 0 0-1.94 1.94C2 8.91 2 12 2 12s0 3.09.42 4.81a2.75 2.75 0 0 0 1.94 1.94c1.72.45 7.64.45 7.64.45s5.92 0 7.64-.45a2.75 2.75 0 0 0 1.94-1.94C22 15.09 22 12 22 12s0-3.09-.42-4.81Z" />
+                      <polygon fill="#11121d" points="10,15.2 15.5,12 10,8.8" />
+                    </svg>
+                  </div>
+                </div>
+                <span class="quick-card-name">Youtube</span>
+                <span class="quick-card-domain">youtube.com</span>
+              </button>
+
+              <!-- 5. Spotify -->
+              <button type="button" class="quick-card" data-url="https://open.spotify.com">
+                <div class="quick-icon-frame">
+                  <div class="quick-icon-badge">
+                    <svg width="25" height="25" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="10" fill="#1ED760" />
+                      <path d="M16.5 15.4c-.2.3-.6.4-.9.2-2.5-1.5-5.6-1.9-9.3-1-.4.1-.7-.2-.8-.5-.1-.4.2-.7.5-.8 4-.9 7.5-.5 10.3 1.2.3.2.4.6.2.9zm1.2-2.8c-.3.4-.8.5-1.1.3-2.8-1.7-7.1-2.2-10.5-1.2-.4.1-.9-.1-1-.6-.1-.4.1-.9.6-1 3.8-1.2 8.6-.6 11.8 1.4.3.2.4.7.2 1.1zm.1-2.9C14.4 7.7 8.8 7.5 5.6 8.5c-.5.2-1.1-.1-1.3-.6-.2-.5.1-1.1.6-1.3 3.7-1.1 9.9-.9 13.8 1.4.5.3.6.9.3 1.4-.3.5-.9.6-1.2.3z" fill="#11121d" />
+                    </svg>
+                  </div>
+                </div>
+                <span class="quick-card-name">Spotify</span>
+                <span class="quick-card-domain">open.spotify.com</span>
+              </button>
+            </div>
+
+            <form id="home-search-form" class="home-search-form" autocomplete="off">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#686d87" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                id="home-search-input"
+                class="home-search-input"
+                type="text"
+                spellcheck="false"
+                placeholder="Search DuckDuckGo or type a URL..."
+                aria-label="Search DuckDuckGo or type a URL"
+              />
+              <button class="home-search-btn" type="submit">Go</button>
+            </form>
+          </div>
+        </div>
+
+        <iframe
+          id="proxy-frame"
+          title="Proxied Web Content"
+          allow="fullscreen; clipboard-read; clipboard-write; autoplay; encrypted-media; picture-in-picture"
+        ></iframe>
+      </main>
+    </div>
+
+    <script type="module">
+      import { BareMuxConnection } from "/baremux/index.mjs";
+      import EpoxyTransport from "/epoxy/index.mjs";
+
+      const appShell = document.getElementById("app-shell");
+      const urlForm = document.getElementById("url-form");
+      const urlInput = document.getElementById("url-input");
+      const homeForm = document.getElementById("home-search-form");
+      const homeInput = document.getElementById("home-search-input");
+      const homeOverlay = document.getElementById("home-overlay");
+      const brandHome = document.getElementById("brand-home");
+      const btnBack = document.getElementById("btn-back");
+      const btnForward = document.getElementById("btn-forward");
+      const btnReload = document.getElementById("btn-reload");
+      const btnHome = document.getElementById("btn-home");
+      const btnClear = document.getElementById("btn-clear");
+      const btnFullscreen = document.getElementById("btn-fullscreen");
+      const btnExitFullscreen = document.getElementById("btn-exit-fullscreen");
+      const loadingTrack = document.getElementById("loading-track");
+      const loadingFill = document.getElementById("loading-fill");
+      const iframe = document.getElementById("proxy-frame");
+
+      // 1. Initialize ScramjetController
+      const { ScramjetController } = $scramjetLoadController();
+      const scramjet = new ScramjetController({
+        prefix: "/scramjet/",
+        files: {
+          wasm: "/scramjet/scramjet.wasm.wasm",
+          all: "/scramjet/scramjet.all.js",
+          sync: "/scramjet/scramjet.sync.js",
+        },
+        flags: {
+          serviceworkers: false,
+          syncxhr: true,
+          strictRewrites: true,
+          rewriterLogs: false,
+          captureErrors: true,
+          cleanErrors: true,
+          scramitize: false,
+          sourcemaps: true,
+          destructureRewrites: false,
+          interceptDownloads: false,
+          allowInvalidJs: true,
+          allowFailedIntercepts: true,
+        },
+      });
+
+      // Attach ScramjetFrame wrapper to the existing #proxy-frame element
+      const scramjetFrame = scramjet.createFrame(iframe);
+
+      let proxyReadyPromise = null;
+      let loadingTimer = null;
+
+      function startLoadingBar() {
+        clearInterval(loadingTimer);
+        loadingTrack.classList.add("is-active");
+        loadingFill.style.width = "18%";
+        let current = 18;
+        loadingTimer = setInterval(() => {
+          if (current < 88) {
+            current += (88 - current) * 0.14;
+            loadingFill.style.width = `${current.toFixed(1)}%`;
+          }
+        }, 160);
+      }
+
+      function finishLoadingBar() {
+        clearInterval(loadingTimer);
+        loadingFill.style.width = "100%";
+        setTimeout(() => {
+          loadingTrack.classList.remove("is-active");
+          loadingFill.style.width = "0%";
+        }, 240);
+      }
+
+      // Normalize user input into a valid URL or DuckDuckGo search URL
+      function resolveTargetUrl(rawInput) {
+        const input = rawInput.trim();
+        if (!input) return "https://duckduckgo.com/";
+
+        if (/^https?:\/\//i.test(input)) {
+          try {
+            return new URL(input).href;
+          } catch {
+            // Fall through to search
+          }
+        }
+
+        const hasSpaces = /\s/.test(input);
+        const domainPattern = /^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(:\d+)?(\/.*)?$/;
+        const localhostPattern = /^(localhost|\d{1,3}(\.\d{1,3}){3})(:\d+)?(\/.*)?$/;
+
+        if (!hasSpaces && (domainPattern.test(input) || localhostPattern.test(input))) {
+          try {
+            return new URL(`https://${input}`).href;
+          } catch {
+            // Fall through to search
+          }
+        }
+
+        return `https://duckduckgo.com/?q=${encodeURIComponent(input)}`;
+      }
+
+      // Ensure Service Worker, ScramjetController, and BareMux + Epoxy transport are initialized
+      async function initProxyStack() {
+        try {
+          localStorage.setItem("bare-mux-path", "/baremux/worker.js");
+
+          await scramjet.init();
+
+          if ("serviceWorker" in navigator) {
+            const registration = await navigator.serviceWorker.register("/sw.js", {
+              scope: "/",
+              updateViaCache: "none",
+            });
+            await navigator.serviceWorker.ready;
+
+            if (!navigator.serviceWorker.controller) {
+              await new Promise((resolve) => {
+                const onController = () => {
+                  navigator.serviceWorker.removeEventListener("controllerchange", onController);
+                  resolve();
+                };
+                navigator.serviceWorker.addEventListener("controllerchange", onController);
+                if (registration.active) {
+                  setTimeout(resolve, 600);
+                }
+              });
+            }
+
+            await scramjet.init();
+          }
+
+          const wispProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+          const wispUrl = `${wispProtocol}//${window.location.host}/wisp/`;
+
+          const connection = new BareMuxConnection("/baremux/worker.js");
+          try {
+            await connection.setTransport("/epoxy/index.mjs", [{ wisp: wispUrl }]);
+          } catch (workerErr) {
+            console.warn("Falling back to remote EpoxyTransport instance:", workerErr);
+            const remoteEpoxy = new EpoxyTransport({ wisp: wispUrl });
+            await connection.setRemoteTransport(remoteEpoxy, "/epoxy/index.mjs");
+          }
+        } catch (err) {
+          console.error("Failed to initialize proxy stack:", err);
+        }
+      }
+
+      proxyReadyPromise = initProxyStack();
+
+      // Navigate iframe using scramjet.encodeUrl()
+      async function navigateTo(rawInput) {
+        if (proxyReadyPromise) {
+          await proxyReadyPromise;
+        }
+        const targetUrl = resolveTargetUrl(rawInput);
+        urlInput.value = targetUrl;
+        btnClear.classList.toggle("is-visible", targetUrl.length > 0);
+        homeOverlay.classList.add("is-hidden");
+
+        startLoadingBar();
+
+        const encodedUrl = scramjet.encodeUrl(targetUrl);
+        iframe.src = encodedUrl;
+      }
+
+      scramjetFrame.addEventListener("urlchange", (event) => {
+        if (event.url) {
+          urlInput.value = event.url;
+          btnClear.classList.toggle("is-visible", event.url.length > 0);
+        }
+      });
+
+      scramjetFrame.addEventListener("navigate", (event) => {
+        if (event.url) {
+          startLoadingBar();
+          urlInput.value = event.url;
+          btnClear.classList.toggle("is-visible", event.url.length > 0);
+        }
+      });
+
+      scramjetFrame.addEventListener("contextInit", (event) => {
+        try {
+          const proxiedWin = event.window;
+          if (!proxiedWin) return;
+
+          proxiedWin.open = (openUrl) => {
+            if (openUrl) {
+              try {
+                const resolved = new URL(openUrl, event.client?.url?.href || urlInput.value).href;
+                navigateTo(resolved);
+              } catch {
+                navigateTo(String(openUrl));
+              }
+            }
+            return proxiedWin;
+          };
+
+          proxiedWin.addEventListener(
+            "click",
+            (clickEvent) => {
+              const anchor = clickEvent.target?.closest?.("a[target='_blank']");
+              if (anchor) {
+                anchor.setAttribute("target", "_self");
+              }
+            },
+            true
+          );
+        } catch {
+          // Ignore cross-context errors
+        }
+      });
+
+      iframe.addEventListener("load", () => {
+        finishLoadingBar();
+        try {
+          const currentHref = iframe.contentWindow?.location?.href;
+          if (currentHref && currentHref.includes("/scramjet/")) {
+            const decoded = scramjet.decodeUrl(currentHref);
+            if (decoded && decoded.startsWith("http")) {
+              urlInput.value = decoded;
+              btnClear.classList.toggle("is-visible", decoded.length > 0);
+            }
+          }
+        } catch {
+          // Ignore if about:blank
+        }
+      });
+
+      urlForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        if (urlInput.value.trim()) {
+          navigateTo(urlInput.value);
+          urlInput.blur();
+        }
+      });
+
+      homeForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        if (homeInput.value.trim()) {
+          navigateTo(homeInput.value);
+        }
+      });
+
+      urlInput.addEventListener("input", () => {
+        btnClear.classList.toggle("is-visible", urlInput.value.length > 0);
+      });
+
+      urlInput.addEventListener("focus", () => {
+        urlInput.select();
+      });
+
+      btnClear.addEventListener("click", () => {
+        urlInput.value = "";
+        btnClear.classList.remove("is-visible");
+        urlInput.focus();
+      });
+
+      document.querySelectorAll(".quick-card").forEach((card) => {
+        card.addEventListener("click", () => {
+          const target = card.getAttribute("data-url");
+          if (target) navigateTo(target);
+        });
+      });
+
+      btnBack.addEventListener("click", () => {
+        try {
+          scramjetFrame.back();
+        } catch {
+          iframe.contentWindow?.history.back();
+        }
+      });
+
+      btnForward.addEventListener("click", () => {
+        try {
+          scramjetFrame.forward();
+        } catch {
+          iframe.contentWindow?.history.forward();
+        }
+      });
+
+      btnReload.addEventListener("click", () => {
+        if (!homeOverlay.classList.contains("is-hidden")) return;
+        startLoadingBar();
+        try {
+          scramjetFrame.reload();
+        } catch {
+          if (urlInput.value.trim()) {
+            navigateTo(urlInput.value);
+          }
+        }
+      });
+
+      function showHome() {
+        homeOverlay.classList.remove("is-hidden");
+        homeInput.focus();
+      }
+
+      btnHome.addEventListener("click", showHome);
+      brandHome.addEventListener("click", showHome);
+
+      function toggleFullscreen(forceState) {
+        const shouldEnter =
+          typeof forceState === "boolean"
+            ? forceState
+            : !appShell.classList.contains("is-fullscreen");
+
+        appShell.classList.toggle("is-fullscreen", shouldEnter);
+
+        if (shouldEnter) {
+          if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(() => {});
+          }
+        } else {
+          if (document.fullscreenElement && document.exitFullscreen) {
+            document.exitFullscreen().catch(() => {});
+          }
+        }
+      }
+
+      btnFullscreen.addEventListener("click", () => toggleFullscreen());
+      btnExitFullscreen.addEventListener("click", () => toggleFullscreen(false));
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && appShell.classList.contains("is-fullscreen")) {
+          toggleFullscreen(false);
+        }
+      });
+    </script>
+  </body>
+</html>
